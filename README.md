@@ -296,7 +296,7 @@ Future improvements planned for GitPulse:
 
 # 👨‍💻 Author
 
-**Raghav Sharma**
+**Suryansh Sharma**
 
 ⭐ If you like the project, consider giving it a star!
 
