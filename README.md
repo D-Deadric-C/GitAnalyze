@@ -261,12 +261,27 @@ Create `.env.local`
 ```
 GITHUB_TOKEN=
 GEMINI_API_KEY=
+RAG_PIPELINE_URL=http://127.0.0.1:8008
 DATABASE_URL=
 ```
 
 ---
 
 ### Start Development Server
+
+Install the Python RAG service dependencies once:
+
+```bash
+python -m pip install -e ".[test]"
+```
+
+Run the Python RAG pipeline service in one terminal:
+
+```bash
+npm run rag:dev
+```
+
+Run the Next.js app in a second terminal:
 
 ```bash
 npm run dev

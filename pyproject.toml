@@ -1,0 +1,24 @@
+[project]
+name = "gitpulse-rag-service"
+version = "0.1.0"
+description = "Python RAG pipeline service for GitPulse repository chat."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "google-genai>=1.0.0",
+    "httpx>=0.28.0",
+    "pydantic>=2.10.0",
+    "uvicorn[standard]>=0.34.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["rag_service"]
+asyncio_mode = "auto"
+
