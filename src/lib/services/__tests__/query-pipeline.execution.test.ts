@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { executeRepoQuery, executeRepoQueryStream } from "@/lib/services/query-pipeline";
+import { executeRepoQuery, executeRepoQueryStream, selectRepoFiles } from "@/lib/services/query-pipeline";
 import type { StreamUpdate } from "@/lib/streaming-types";
 
 const {
@@ -18,14 +18,22 @@ vi.mock("@/lib/cache", () => ({
     getLatestRepoQueryAnswer: getLatestRepoQueryAnswerMock,
 }));
 
-vi.mock("@/lib/gemini", () => ({
-    analyzeFileSelection: vi.fn(),
-    answerWithContextStream: vi.fn(),
-}));
+function ndjsonResponse(lines: unknown[]) {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+            for (const line of lines) {
+                controller.enqueue(encoder.encode(`${JSON.stringify(line)}\n`));
+            }
+            controller.close();
+        },
+    });
 
-vi.mock("@/lib/github", () => ({
-    getFileContentBatch: vi.fn(),
-}));
+    return new Response(body, {
+        status: 200,
+        headers: { "Content-Type": "application/x-ndjson" },
+    });
+}
 
 describe("executeRepoQueryStream", () => {
     beforeEach(() => {
@@ -36,14 +44,18 @@ describe("executeRepoQueryStream", () => {
 
     it("short-circuits when a latest cached answer exists", async () => {
         getLatestRepoQueryAnswerMock.mockResolvedValue("recent answer");
+        const fetchMock = vi.fn();
 
         const updates: StreamUpdate[] = [];
-        for await (const update of executeRepoQueryStream({
-            query: "what does this repo do?",
-            owner: "acme",
-            repo: "widget",
-            filePaths: ["src/index.ts"],
-        })) {
+        for await (const update of executeRepoQueryStream(
+            {
+                query: "what does this repo do?",
+                owner: "acme",
+                repo: "widget",
+                filePaths: ["src/index.ts"],
+            },
+            { fetch: fetchMock, serviceUrl: "http://python-rag" }
+        )) {
             updates.push(update);
         }
 
@@ -51,9 +63,51 @@ describe("executeRepoQueryStream", () => {
             { type: "content", text: "recent answer", append: true },
             { type: "complete", relevantFiles: [] },
         ]);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("streams newline-delimited updates from the Python service", async () => {
+        getLatestRepoQueryAnswerMock.mockResolvedValue(null);
+        const fetchMock = vi.fn().mockResolvedValue(ndjsonResponse([
+            { type: "status", message: "Analyzing repository structure...", progress: 15 },
+            { type: "files", files: ["src/core.py"] },
+            { type: "content", text: "hello", append: true },
+            { type: "complete", relevantFiles: ["src/core.py"] },
+        ]));
+
+        const updates: StreamUpdate[] = [];
+        for await (const update of executeRepoQueryStream(
+            {
+                query: "summarize",
+                owner: "acme",
+                repo: "widget",
+                filePaths: ["src/core.py"],
+                modelPreference: "thinking",
+            },
+            { fetch: fetchMock, serviceUrl: "http://python-rag/" }
+        )) {
+            updates.push(update);
+        }
+
+        expect(fetchMock).toHaveBeenCalledWith("http://python-rag/repo/query/stream", expect.objectContaining({
+            method: "POST",
+            body: JSON.stringify({
+                query: "summarize",
+                repoDetails: { owner: "acme", repo: "widget" },
+                filePaths: ["src/core.py"],
+                history: [],
+                profileData: undefined,
+                modelPreference: "thinking",
+            }),
+        }));
+        expect(updates).toEqual([
+            { type: "status", message: "Analyzing repository structure...", progress: 15 },
+            { type: "files", files: ["src/core.py"] },
+            { type: "content", text: "hello", append: true },
+            { type: "complete", relevantFiles: ["src/core.py"] },
+        ]);
     });
 });
-
 describe("executeRepoQuery", () => {
     beforeEach(() => {
         getCachedRepoQueryAnswerMock.mockReset();
@@ -61,62 +115,81 @@ describe("executeRepoQuery", () => {
         getLatestRepoQueryAnswerMock.mockReset();
     });
 
-    it("returns cached answer when selected-file cache hit exists", async () => {
-        getLatestRepoQueryAnswerMock.mockResolvedValue(null);
-        getCachedRepoQueryAnswerMock.mockResolvedValue("cached-by-selection");
-
-        const analyzeFiles = vi.fn().mockResolvedValue(["src/index.ts"]);
-
-        const result = await executeRepoQuery(
-            {
-                query: "explain architecture",
-                owner: "acme",
-                repo: "widget",
-                filePaths: ["src/index.ts", "public/logo.png"],
-            },
-            { analyzeFiles }
-        );
-
-        expect(result).toEqual({
-            answer: "cached-by-selection",
-            relevantFiles: ["src/index.ts"],
-        });
-        expect(cacheRepoQueryAnswerMock).not.toHaveBeenCalled();
-    });
-
-    it("streams and caches a fresh answer when no cache hit exists", async () => {
-        getLatestRepoQueryAnswerMock.mockResolvedValue(null);
+    it("caches successful non-streaming Python responses", async () => {
         getCachedRepoQueryAnswerMock.mockResolvedValue(null);
-
-        const analyzeFiles = vi.fn().mockResolvedValue(["src/core.ts"]);
-        const fetchFiles = vi.fn().mockResolvedValue([
-            { path: "src/core.ts", content: "export const value = 1;" },
-        ]);
-        const streamAnswer = async function* () {
-            yield "First ";
-            yield "Second";
-        };
+        const fetchMock = vi.fn().mockResolvedValue(Response.json({
+            answer: "Fresh answer",
+            relevantFiles: ["src/core.py"],
+        }));
 
         const result = await executeRepoQuery(
             {
-                query: "summarize core logic",
+                query: "summarize",
                 owner: "acme",
                 repo: "widget",
-                filePaths: ["src/core.ts"],
+                filePaths: ["src/core.py"],
             },
-            { analyzeFiles, fetchFiles, streamAnswer }
+            { fetch: fetchMock, serviceUrl: "http://python-rag" }
         );
 
         expect(result).toEqual({
-            answer: "First Second",
-            relevantFiles: ["src/core.ts"],
+            answer: "Fresh answer",
+            relevantFiles: ["src/core.py"],
         });
         expect(cacheRepoQueryAnswerMock).toHaveBeenCalledWith(
             "acme",
             "widget",
-            "summarize core logic",
-            ["src/core.ts"],
-            "First Second"
+            "summarize",
+            ["src/core.py"],
+            "Fresh answer"
         );
+    });
+
+    it("returns a cached answer when the Python-selected file set is cached", async () => {
+        getCachedRepoQueryAnswerMock.mockResolvedValue("cached-by-selection");
+        const fetchMock = vi.fn().mockResolvedValue(Response.json({
+            answer: "Fresh answer",
+            relevantFiles: ["src/core.py"],
+        }));
+
+        const result = await executeRepoQuery(
+            {
+                query: "summarize",
+                owner: "acme",
+                repo: "widget",
+                filePaths: ["src/core.py"],
+            },
+            { fetch: fetchMock, serviceUrl: "http://python-rag" }
+        );
+
+        expect(result).toEqual({
+            answer: "cached-by-selection",
+            relevantFiles: ["src/core.py"],
+        });
+        expect(cacheRepoQueryAnswerMock).not.toHaveBeenCalled();
+    });
+});
+
+describe("selectRepoFiles", () => {
+    it("returns file selection results from the Python service", async () => {
+        const fetchMock = vi.fn().mockResolvedValue(Response.json({
+            relevantFiles: ["src/core.py"],
+            fileCount: 1,
+        }));
+
+        const result = await selectRepoFiles(
+            {
+                query: "where is core logic?",
+                owner: "acme",
+                repo: "widget",
+                filePaths: ["src/core.py"],
+            },
+            { fetch: fetchMock, serviceUrl: "http://python-rag" }
+        );
+
+        expect(result).toEqual({ relevantFiles: ["src/core.py"], fileCount: 1 });
+        expect(fetchMock).toHaveBeenCalledWith("http://python-rag/repo/select-files", expect.objectContaining({
+            method: "POST",
+        }));
     });
 });

@@ -14,6 +14,7 @@
     "test:security": "vitest run src/lib/__tests__/security-scanner.test.ts src/lib/__tests__/security-benchmark.test.ts src/lib/services/__tests__/security-service.test.ts src/lib/services/__tests__/security-verification.test.ts src/lib/services/__tests__/fix-verification.test.ts src/lib/__tests__/cache-scan.test.ts src/lib/__tests__/gemini-security.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "rag:dev": "uvicorn gitpulse_rag.app:app --app-dir rag_service --host 127.0.0.1 --port 8008 --reload",
     "hygiene:freeze-baseline": "node scripts/freeze-hygiene-baseline.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

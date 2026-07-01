@@ -43,6 +43,7 @@ import type { ModelPreference } from "@/lib/ai-client";
 import {
     executeRepoQuery,
     executeRepoQueryStream,
+    selectRepoFiles,
 } from "@/lib/services/query-pipeline";
 import {
     buildScanConfig,
@@ -288,15 +289,13 @@ export async function analyzeRepoFiles(
     repo?: string,
     modelPreference: ModelPreference = "flash"
 ): Promise<{ relevantFiles: string[]; fileCount: number }> {
-    // For backwards compatibility (some callers only want the file list),
-    // we run the selection step directly from gemini rather than the full pipeline
-    const { analyzeFileSelection } = await import("@/lib/gemini");
-    const SKIP = /\.(png|jpg|jpeg|gif|svg|ico|lock|pdf|zip|tar|gz|map|wasm|min\.js|min\.css)$/i;
-    const pruned = filePaths.filter(
-        (p) => !SKIP.test(p) && !p.includes("node_modules/") && !p.includes(".git/")
-    );
-    const relevantFiles = await analyzeFileSelection(query, pruned, owner, repo, modelPreference);
-    return { relevantFiles, fileCount: relevantFiles.length };
+    return selectRepoFiles({
+        query,
+        owner: owner ?? "",
+        repo: repo ?? "",
+        filePaths,
+        modelPreference,
+    });
 }
 
 /**
