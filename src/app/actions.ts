@@ -36,7 +36,7 @@ import {
 import type { StreamUpdate } from "@/lib/streaming-types";
 import type { GitHubProfile } from "@/lib/github";
 import type { SearchResult } from "@/lib/search-engine";
-import { getCachedSecurityScanResult, cacheSecurityScanResult } from "@/lib/cache";
+import { getCachedSecurityScanResult, cacheSecurityScanResult, safeKvOperation } from "@/lib/cache";
 import type { ModelPreference } from "@/lib/ai-client";
 
 // ─── Services & Domain ────────────────────────────────────────────────────────
@@ -523,7 +523,7 @@ export async function scanRepositoryVulnerabilities(
         };
     } else {
         if (config.analysisProfile === "deep" && limitKey) {
-            const currentScans = await kv.get<number>(limitKey) || 0;
+            const currentScans = await safeKvOperation(() => kv.get<number>(limitKey)) || 0;
             if (currentScans >= DEEP_SCAN_MONTHLY_LIMIT) {
                 throw new Error(`Monthly Deep Scan limit reached (${DEEP_SCAN_MONTHLY_LIMIT}/${DEEP_SCAN_MONTHLY_LIMIT}).`);
             }
@@ -537,9 +537,9 @@ export async function scanRepositoryVulnerabilities(
 
     // Deep quota counts only fresh deep scans (cache hits do not consume quota).
     if (config.analysisProfile === "deep" && limitKey && !isCacheHit) {
-        await kv.incr(limitKey);
+        await safeKvOperation(() => kv.incr(limitKey));
         // Expire key after 32 days to clean up
-        await kv.expire(limitKey, 32 * 24 * 60 * 60);
+        await safeKvOperation(() => kv.expire(limitKey, 32 * 24 * 60 * 60));
     }
 
     let scanId: string | undefined;
@@ -596,7 +596,7 @@ export async function getRemainingDeepScans(): Promise<{ used: number; total: nu
     const monthKey = `${now.getFullYear()}_${now.getMonth() + 1}`;
     const limitKey = `user:${session.user.id}:deep_scans:${monthKey}`;
 
-    const currentScans = await kv.get<number>(limitKey) || 0;
+    const currentScans = await safeKvOperation(() => kv.get<number>(limitKey)) || 0;
 
     return { used: currentScans, total, resetsAt, isUnlimited: false };
 }

@@ -58,6 +58,14 @@ vi.mock("@/lib/github", () => ({
 vi.mock("@/lib/cache", () => ({
     getCachedSecurityScanResult: getCachedSecurityScanResultMock,
     cacheSecurityScanResult: cacheSecurityScanResultMock,
+    // Mirrors the real helper: run the operation, degrade to null if KV is unavailable.
+    safeKvOperation: async <T,>(operation: () => Promise<T>) => {
+        try {
+            return await operation();
+        } catch {
+            return null;
+        }
+    },
 }));
 
 vi.mock("@/lib/services/security-service", () => ({

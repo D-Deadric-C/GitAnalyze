@@ -22,7 +22,7 @@ interface RepoFullContextCachePayload {
 }
 
 // Helper to handle KV errors gracefully
-async function safeKvOperation<T>(operation: () => Promise<T>): Promise<T | null> {
+export async function safeKvOperation<T>(operation: () => Promise<T>): Promise<T | null> {
     try {
         return await operation();
     } catch (error) {
