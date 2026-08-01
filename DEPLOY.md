@@ -14,6 +14,37 @@ Replace `YOUR_PROJECT_ID` throughout.
 
 ---
 
+## Before you start: GCP account and project
+
+Done once, in the browser at https://console.cloud.google.com.
+
+**1. Sign in and start the free trial.** Google gives new accounts $300 of credit
+valid for 90 days.
+
+**2. Add a billing account.** A card is required even for the always-free tier;
+you will see a small temporary verification charge. Cloud Run will not deploy
+without billing enabled.
+
+**3. Create a project.** Top bar project selector -> *New project*. Name it
+`gitpulse`. The generated **project ID** (e.g. `gitpulse-472913`) is permanent,
+globally unique, and is what every command below wants — not the display name.
+
+**4. Set a budget alert before deploying anything.** *Billing -> Budgets & alerts
+-> Create budget*, set a monthly cap (₹500 is plenty) with alerts at 50/90/100%.
+This is the guardrail against a runaway loop producing a surprise bill.
+
+### What this actually costs
+
+| | Free allowance | This app |
+|---|---|---|
+| Cloud Run | 2M requests, 360k GB-s / month | Both services scale to zero; realistically free |
+| Artifact Registry | 0.5 GB | Images are ~950 MB total, so a few cents per month |
+| Neon | Free tier | Free |
+
+Expect roughly zero while traffic is low, but keep the budget alert on.
+
+---
+
 ## 0. Install and authenticate gcloud
 
 Arch:
