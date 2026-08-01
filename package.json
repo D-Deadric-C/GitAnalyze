@@ -10,7 +10,7 @@
     "lint:report": "node scripts/eslint-baseline.mjs report",
     "lint:baseline:update": "node scripts/eslint-baseline.mjs update",
     "lint:baseline:check": "node scripts/eslint-baseline.mjs check",
-    "test": "vitest run",
+    "test": "prisma generate && vitest run",
     "test:security": "vitest run src/lib/__tests__/security-scanner.test.ts src/lib/__tests__/security-benchmark.test.ts src/lib/services/__tests__/security-service.test.ts src/lib/services/__tests__/security-verification.test.ts src/lib/services/__tests__/fix-verification.test.ts src/lib/__tests__/cache-scan.test.ts src/lib/__tests__/gemini-security.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

@@ -74,23 +74,23 @@ GitPulse works without cloning repositories locally — it analyzes code using *
 <table>
 
 <tr>
-<td><img src="https://github.com/0Raghav-Sharma0/gitPulse/blob/main/Screenshot%202026-03-17%20021821.png" width="400"/></td>
-<td><img src="https://github.com/0Raghav-Sharma0/gitPulse/blob/main/Screenshot%202026-03-17%20021913.png" width="400"/></td>
+<td><img src="https://github.com/Suryansh-Sharma/gitPulse/blob/main/Screenshot%202026-03-17%20021821.png" width="400"/></td>
+<td><img src="https://github.com/Suryansh-Sharma/gitPulse/blob/main/Screenshot%202026-03-17%20021913.png" width="400"/></td>
 </tr>
 
 <tr>
-<td><img src="https://github.com/0Raghav-Sharma0/gitPulse/blob/main/Screenshot%202026-03-17%20021938.png" width="400"/></td>
-<td><img src="https://github.com/0Raghav-Sharma0/gitPulse/blob/main/WhatsApp%20Image%202026-03-17%20at%2000.27.00.jpeg" width="400"/></td>
+<td><img src="https://github.com/Suryansh-Sharma/gitPulse/blob/main/Screenshot%202026-03-17%20021938.png" width="400"/></td>
+<td><img src="https://github.com/Suryansh-Sharma/gitPulse/blob/main/WhatsApp%20Image%202026-03-17%20at%2000.27.00.jpeg" width="400"/></td>
 </tr>
 
 <tr>
-<td><img src="https://github.com/0Raghav-Sharma0/gitPulse/blob/main/WhatsApp%20Image%202026-03-17%20at%2000.27.01%20(1).jpeg" width="400"/></td>
-<td><img src="https://github.com/0Raghav-Sharma0/gitPulse/blob/main/WhatsApp%20Image%202026-03-17%20at%2000.27.01%20(2).jpeg" width="400"/></td>
+<td><img src="https://github.com/Suryansh-Sharma/gitPulse/blob/main/WhatsApp%20Image%202026-03-17%20at%2000.27.01%20(1).jpeg" width="400"/></td>
+<td><img src="https://github.com/Suryansh-Sharma/gitPulse/blob/main/WhatsApp%20Image%202026-03-17%20at%2000.27.01%20(2).jpeg" width="400"/></td>
 </tr>
 
 <tr>
-<td><img src="https://github.com/0Raghav-Sharma0/gitPulse/blob/main/WhatsApp%20Image%202026-03-17%20at%2000.27.01%20(3).jpeg" width="400"/></td>
-<td><img src="https://github.com/0Raghav-Sharma0/gitPulse/blob/main/WhatsApp%20Image%202026-03-17%20at%2000.27.01.jpeg" width="400"/></td>
+<td><img src="https://github.com/Suryansh-Sharma/gitPulse/blob/main/WhatsApp%20Image%202026-03-17%20at%2000.27.01%20(3).jpeg" width="400"/></td>
+<td><img src="https://github.com/Suryansh-Sharma/gitPulse/blob/main/WhatsApp%20Image%202026-03-17%20at%2000.27.01.jpeg" width="400"/></td>
 </tr>
 
 </table>

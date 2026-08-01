@@ -31,6 +31,7 @@ __pycache__/
 .DS_Store
 *.pem
 .vscode
+.claude
 .agents
 .codex-artifacts
 

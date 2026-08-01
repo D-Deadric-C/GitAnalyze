@@ -1,6 +1,6 @@
 
 import { config } from "dotenv";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 config({ path: ".env.local" });
 config();
@@ -13,14 +13,24 @@ if (process.env.VERCEL && !process.env.DIRECT_URL) {
   );
 }
 
-export default defineConfig({
+const baseConfig = {
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
-  engine: "classic",
-  datasource: {
-    // Avoid running migrations through pooled URLs; advisory locks require a direct connection.
-    url: prismaCliDatabaseUrl ?? env("DATABASE_URL"),
-  },
-});
+} as const;
+
+// Only override the datasource when a URL is actually available. Declaring it
+// unconditionally makes every Prisma command fail on a fresh checkout, including
+// `prisma generate`, which needs no database at all. Without a URL we fall back to
+// the schema's own `env("DATABASE_URL")`.
+export default prismaCliDatabaseUrl
+  ? defineConfig({
+      ...baseConfig,
+      engine: "classic",
+      datasource: {
+        // Avoid running migrations through pooled URLs; advisory locks require a direct connection.
+        url: prismaCliDatabaseUrl,
+      },
+    })
+  : defineConfig(baseConfig);
