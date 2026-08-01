@@ -13,6 +13,8 @@ import CAGComparison from "@/components/CAGComparison";
 import Image from "next/image";
 import CodeIcon from "@/components/CodeIcon";
 import { InstallPWA } from "@/components/InstallPWA";
+import AdSlot from "@/components/AdSlot";
+import { ADSENSE_SLOTS, isAdSlotEnabled } from "@/lib/adsense";
 import AuthButton from "@/components/AuthButton";
 import { INVALID_SESSION_ERROR_PARAM } from "@/lib/session-guard";
 import { BlogPost } from "@prisma/client";
@@ -174,6 +176,16 @@ export default function HomeClient({ initialPosts = [] }: { initialPosts?: BlogP
             <div className="relative z-10 w-full bg-white/50 backdrop-blur-sm border-b-2 border-black">
                 <BentoFeatures />
             </div>
+
+            {/* Sponsored — the whole band is dropped unless NEXT_PUBLIC_ADSENSE_CLIENT_ID
+                and the homepage slot ID are both set, so no empty strip is left behind. */}
+            {isAdSlotEnabled(ADSENSE_SLOTS.homepage) && (
+                <div className="relative z-10 w-full px-6 py-10 border-b-2 border-black">
+                    <div className="max-w-5xl mx-auto">
+                        <AdSlot slot={ADSENSE_SLOTS.homepage} label="Advertisement" />
+                    </div>
+                </div>
+            )}
 
             {initialPosts.length > 0 && (
                 <section className="relative z-10 w-full py-14 md:py-16 px-6 border-b-2 border-black">

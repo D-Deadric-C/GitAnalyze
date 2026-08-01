@@ -7,6 +7,7 @@ import "@fontsource/iosevka/latin-700.css";
 import "./globals.css";
 import JsonLd from "./components/json-ld";
 import { Providers } from "@/components/Providers";
+import AdSenseScript from "@/components/AdSenseScript";
 import { getCanonicalSiteUrl } from "@/lib/site-url";
 
 export const viewport: Viewport = {
@@ -106,6 +107,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <JsonLd />
+        <AdSenseScript />
         <Providers>
           {children}
         </Providers>
