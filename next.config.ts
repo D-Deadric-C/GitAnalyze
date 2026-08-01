@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '5mb',
     },
+    // Static generation otherwise spawns (cpus - 1) workers, each loading the
+    // full server bundle and Prisma client. On a 20-core machine that is 19
+    // processes and enough memory pressure to exhaust 16GB. This phase takes
+    // about a second of a ~50s build, so capping it costs almost no build time.
+    cpus: 4,
   },
   images: {
     remotePatterns: [
