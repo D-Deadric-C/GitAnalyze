@@ -1,8 +1,15 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 import withPWA from "next-pwa";
 
 const nextConfig: NextConfig = {
-  turbopack: {}, // Silence Turbopack warning for webpack-based next-pwa
+  // Emits .next/standalone with only the traced runtime dependencies, which is
+  // what the container image copies. Required for a small Cloud Run image.
+  output: "standalone",
+  // Without this Next infers the workspace root from the nearest lockfile above
+  // this directory and nests standalone output under the inferred path.
+  outputFileTracingRoot: path.resolve(__dirname),
+  turbopack: { root: path.resolve(__dirname) },
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb',

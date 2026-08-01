@@ -1,0 +1,28 @@
+.git
+.github
+node_modules
+.next
+.venv
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+coverage
+
+# Never bake secrets into an image layer.
+.env
+.env.local
+
+.claude
+.vscode
+.agents
+.codex-artifacts
+.vercel
+
+# Docs and screenshots are not needed at runtime.
+*.md
+!README.md
+Screenshot*.png
+WhatsApp*.jpeg
+lint-baseline.json
+tests

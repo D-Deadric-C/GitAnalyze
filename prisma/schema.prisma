@@ -1,5 +1,8 @@
 generator client {
   provider = "prisma-client-js"
+  // "native" keeps local development working; the Debian target matches the
+  // node:24-slim container image used for Cloud Run.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
