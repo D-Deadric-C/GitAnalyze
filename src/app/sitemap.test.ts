@@ -9,6 +9,9 @@ const { getPublishedPostsMock, getCanonicalSiteUrlMock, getCuratedReposMock, get
 
 vi.mock("@/lib/services/blog-service", () => ({
   getPublishedPosts: getPublishedPostsMock,
+  // sitemap.ts uses the degrade-to-empty variant so image builds without a
+  // database still succeed; it wraps the same query.
+  getPublishedPostsSafe: getPublishedPostsMock,
 }));
 
 vi.mock("@/lib/site-url", () => ({

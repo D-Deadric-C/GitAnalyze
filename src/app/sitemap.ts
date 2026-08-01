@@ -1,13 +1,17 @@
 import { MetadataRoute } from "next";
 import { getCanonicalSiteUrl } from "@/lib/site-url";
-import { getPublishedPosts } from "@/lib/services/blog-service";
+import { getPublishedPostsSafe } from "@/lib/services/blog-service";
 import { getCuratedRepos, getIndexableTopics } from "@/lib/repo-catalog";
 
 export const dynamic = 'force-static';
 
+// Rebuild hourly so posts published after a deploy enter the sitemap without a
+// new image. Matches the blog routes.
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = getCanonicalSiteUrl();
-    const blogPosts = await getPublishedPosts();
+    const blogPosts = await getPublishedPostsSafe();
 
     const defaultRoutes: MetadataRoute.Sitemap = [
         {

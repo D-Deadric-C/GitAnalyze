@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Metadata } from "next";
-import { getPublishedPosts } from "@/lib/services/blog-service";
+import { getPublishedPostsSafe } from "@/lib/services/blog-service";
 import { ArrowRight, Calendar } from "lucide-react";
 import Footer from "@/components/Footer";
 import { BlogPost } from "@prisma/client";
@@ -11,8 +11,11 @@ export const metadata: Metadata = {
   description: "Deep dives into Agentic CAG, AI-driven code analysis, and high-speed security scanning on GitHub.",
 };
 
+// Refresh hourly so newly published posts appear without rebuilding the image.
+export const revalidate = 3600;
+
 export default async function BlogIndex() {
-  const posts: BlogPost[] = await getPublishedPosts();
+  const posts: BlogPost[] = await getPublishedPostsSafe();
   const featuredPost = posts[0];
   const regularPosts = posts.slice(1);
 

@@ -1,4 +1,4 @@
-import { getPublishedPostBySlug, getPublishedPosts } from "@/lib/services/blog-service";
+import { getPublishedPostBySlug, getPublishedPostsSafe } from "@/lib/services/blog-service";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,9 +8,15 @@ import { EnhancedMarkdown } from "@/components/EnhancedMarkdown";
 import { BlogPost } from "@prisma/client";
 import { Metadata } from "next";
 
-// Generates static params for all blog posts
+// Refresh prerendered articles hourly so posts published after a deploy appear
+// without rebuilding the image.
+export const revalidate = 3600;
+
+// Generates static params for all blog posts. Uses the safe variant so an image
+// build with no database reachable yields zero prerendered slugs rather than
+// failing; those routes then render on demand.
 export async function generateStaticParams() {
-  const posts: BlogPost[] = await getPublishedPosts();
+  const posts: BlogPost[] = await getPublishedPostsSafe();
   return posts.map((post) => ({
     slug: post.slug,
   }));

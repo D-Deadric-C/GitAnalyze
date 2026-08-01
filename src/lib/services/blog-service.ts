@@ -21,7 +21,12 @@ const getCachedHomepagePosts = unstable_cache(
       if (err instanceof PrismaClientKnownRequestError && err.code === "P2021") {
         return [];
       }
-      throw err;
+      // The homepage prerenders during container image builds, where no database
+      // is reachable. `instanceof` is unreliable across the bundled Prisma runtime,
+      // so degrade on any read failure rather than matching on the error type — an
+      // empty blog strip is always better than failing the page.
+      console.warn("Homepage blog posts unavailable (gracefully degrading):", err);
+      return [];
     }
   },
   ["blog-homepage-posts"],
@@ -79,6 +84,23 @@ export async function getPublishedPosts() {
     where: { published: true },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
   });
+}
+
+/**
+ * Same as getPublishedPosts, but degrades to an empty list when the database is
+ * unreachable instead of throwing.
+ *
+ * Container image builds run `next build` with no database in the network, so
+ * prerendering blog routes would otherwise fail the build outright. Pages using
+ * this must set `revalidate` so real content appears once the app is running.
+ */
+export async function getPublishedPostsSafe() {
+  try {
+    return await getPublishedPosts();
+  } catch (error) {
+    console.warn("Blog posts unavailable (gracefully degrading):", error);
+    return [];
+  }
 }
 
 export async function getHomepagePosts() {
