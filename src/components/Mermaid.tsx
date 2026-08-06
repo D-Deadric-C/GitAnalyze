@@ -1,16 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import mermaid from "mermaid";
 import { validateMermaidSyntax, sanitizeMermaidCode, generateMermaidFromJSON } from "@/lib/diagram-utils";
 import { Download, X, Maximize2, ZoomIn, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import html2canvas from "html2canvas-pro";
 import { motion, AnimatePresence } from "framer-motion";
-import { initMermaid } from "@/lib/mermaid-init";
+import { getMermaid } from "@/lib/mermaid-init";
 
-// Initialize mermaid once
-initMermaid();
 
 interface MermaidProps {
     chart: string;
@@ -94,7 +90,7 @@ export const Mermaid = ({ chart, isStreaming = false }: MermaidProps) => {
 
                 // Try rendering with sanitized code
                 try {
-                    const { svg: newSvg } = await mermaid.render(id, sanitized);
+                    const { svg: newSvg } = await (await getMermaid()).render(id, sanitized);
                     if (mounted) {
                         setSvg(newSvg);
                         setError(null);
@@ -126,7 +122,7 @@ export const Mermaid = ({ chart, isStreaming = false }: MermaidProps) => {
                                 const { fixed } = await response.json();
                                 if (fixed) {
                                     console.log('✅ AI Fix received, retrying render...');
-                                    const { svg: fixedSvg } = await mermaid.render(id + '-autofixed', fixed);
+                                    const { svg: fixedSvg } = await (await getMermaid()).render(id + '-autofixed', fixed);
                                     if (mounted) {
                                         setSvg(fixedSvg);
                                         setError(null);
@@ -195,7 +191,7 @@ export const Mermaid = ({ chart, isStreaming = false }: MermaidProps) => {
             if (response.ok) {
                 const { fixed } = await response.json();
                 if (fixed) {
-                    const { svg } = await mermaid.render(id + '-manualfixed', fixed);
+                    const { svg } = await (await getMermaid()).render(id + '-manualfixed', fixed);
                     setSvg(svg);
                     setError(null);
                     console.log('✅ Layer 3 successful: Manual AI fix worked');
@@ -217,6 +213,7 @@ export const Mermaid = ({ chart, isStreaming = false }: MermaidProps) => {
         if (!element) return;
 
         try {
+            const { default: html2canvas } = await import("html2canvas-pro");
             const canvas = await html2canvas(element, {
                 backgroundColor: '#FCFAF5',
                 scale: 2,

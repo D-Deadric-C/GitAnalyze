@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy, Eye, FileCode } from "lucide-react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { LazySyntaxHighlighter } from "./SyntaxHighlighterLazy";
 import type { Components } from "react-markdown";
 
 import { EnhancedMarkdown } from "./EnhancedMarkdown";
@@ -82,22 +81,9 @@ export function CodeBlock({ language, value, components, owner, repo }: CodeBloc
                 </div>
             ) : (
                 <div className="overflow-x-auto w-full min-w-0">
-                    <SyntaxHighlighter
-                        language={language}
-                        style={vscDarkPlus}
-                        customStyle={{
-                            margin: 0,
-                            padding: '1rem',
-                            background: 'transparent',
-                            fontSize: '0.875rem',
-                            lineHeight: '1.5',
-                            whiteSpace: 'pre', // Force no wrapping
-                        }}
-                        wrapLines={false}
-                        wrapLongLines={false}
-                    >
+                    <LazySyntaxHighlighter language={language}>
                         {value}
-                    </SyntaxHighlighter>
+                    </LazySyntaxHighlighter>
                 </div>
             )}
         </div>

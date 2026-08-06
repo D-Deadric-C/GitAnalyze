@@ -1,11 +1,7 @@
-import mermaid from "mermaid";
-
 import { exportChatToMarkdownFile, type ExportMessage } from "@/lib/chat-export";
 import { renderMarkdownToHtml } from "@/lib/clipboard-utils";
 import { generateMermaidFromJSON } from "@/lib/diagram-utils";
-import { initMermaid } from "@/lib/mermaid-init";
-
-initMermaid();
+import { renderMermaidToSvg } from "@/lib/mermaid-init";
 
 export function buildCopyPayload(content: string): { markdown: string; html: string } {
     const markdown = content;
@@ -55,7 +51,7 @@ export async function exportChatMessages(options: {
         title: options.title,
         contextLabel: options.contextLabel,
         messages: options.messages,
-        renderMermaid: (code, id) => mermaid.render(id, code).then((out) => out.svg),
+        renderMermaid: (code, id) => renderMermaidToSvg(code, id),
         convertMermaidJson: (json) => {
             try {
                 return generateMermaidFromJSON(JSON.parse(json));

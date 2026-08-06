@@ -26,3 +26,6 @@ Screenshot*.png
 WhatsApp*.jpeg
 lint-baseline.json
 tests
+
+# React Native app - not part of the server image
+mobapp
