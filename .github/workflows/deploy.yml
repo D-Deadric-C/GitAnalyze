@@ -1,0 +1,112 @@
+# Builds both images and deploys them to Azure Container Apps.
+#
+# Manual by design (`workflow_dispatch`) rather than on every merge, so a push
+# to main can never ship on its own.
+#
+# Required repository secrets:
+#   AZURE_CREDENTIALS   output of:
+#     az ad sp create-for-rbac --name gitpulse-deploy --role contributor \
+#       --scopes /subscriptions/<SUB_ID>/resourceGroups/gitpulse-rg2 --json-auth
+#   ACR_NAME            e.g. gitpulseacr04721
+#   ACR_USERNAME        az acr credential show -n <ACR_NAME> --query username -o tsv
+#   ACR_PASSWORD        az acr credential show -n <ACR_NAME> --query 'passwords[0].value' -o tsv
+
+name: Deploy to Azure
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Which service to deploy
+        required: true
+        default: both
+        type: choice
+        options: [both, web, rag]
+
+env:
+  RESOURCE_GROUP: gitpulse-rg2
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Registry login
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # The commit SHA is the image tag, so every deploy is traceable to a commit
+      # and rollback is just redeploying an older tag.
+      - name: Resolve image tag
+        id: tag
+        run: echo "value=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      # ---- RAG service ----------------------------------------------------
+      - name: Build and push RAG image
+        if: inputs.service == 'both' || inputs.service == 'rag'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: rag_service/Dockerfile
+          push: true
+          tags: ${{ secrets.ACR_NAME }}.azurecr.io/gitpulse-rag:${{ steps.tag.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy RAG service
+        if: inputs.service == 'both' || inputs.service == 'rag'
+        run: |
+          az containerapp update \
+            --name gitpulse-rag \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${{ secrets.ACR_NAME }}.azurecr.io/gitpulse-rag:${{ steps.tag.outputs.value }}"
+
+      # ---- Web app --------------------------------------------------------
+      # NEXT_PUBLIC_* values are compiled into the client bundle, so they have to
+      # be build args here rather than Container Apps environment variables.
+      - name: Build and push web image
+        if: inputs.service == 'both' || inputs.service == 'web'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.ACR_NAME }}.azurecr.io/gitpulse-web:${{ steps.tag.outputs.value }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_ADSENSE_CLIENT_ID=${{ vars.NEXT_PUBLIC_ADSENSE_CLIENT_ID }}
+            NEXT_PUBLIC_ADSENSE_SLOT_HOMEPAGE=${{ vars.NEXT_PUBLIC_ADSENSE_SLOT_HOMEPAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy web app
+        if: inputs.service == 'both' || inputs.service == 'web'
+        run: |
+          az containerapp update \
+            --name gitpulse-web \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${{ secrets.ACR_NAME }}.azurecr.io/gitpulse-web:${{ steps.tag.outputs.value }}"
+
+      # ---- Verify ---------------------------------------------------------
+      - name: Smoke test
+        run: |
+          set -e
+          web=$(az containerapp show -n gitpulse-web -g "$RESOURCE_GROUP" \
+                --query properties.configuration.ingress.fqdn -o tsv)
+          rag=$(az containerapp show -n gitpulse-rag -g "$RESOURCE_GROUP" \
+                --query properties.configuration.ingress.fqdn -o tsv)
+          echo "Waiting for the new revision to take traffic..."
+          sleep 45
+          echo "web  https://$web"
+          curl -fsS -o /dev/null -w "  homepage %{http_code}\n" --max-time 90 "https://$web/"
+          echo "rag  https://$rag"
+          curl -fsS --max-time 60 "https://$rag/healthz"

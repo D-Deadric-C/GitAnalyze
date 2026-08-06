@@ -1,0 +1,97 @@
+# Continuous integration for the web app and the Python RAG service.
+#
+# Neither suite needs a database: prisma.config.ts only overrides the datasource
+# when a URL is present, so `prisma generate` runs without one, and the tests
+# mock every data access.
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same branch cancels the previous run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # Install scripts are needed for the Prisma engines and sharp binaries.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # Compares against lint-baseline.json rather than demanding zero problems,
+      # so CI fails on *new* lint regressions without blocking on the 20
+      # pre-existing ones. Refresh with `npm run lint:baseline:update`.
+      - name: Lint
+        run: npm run lint:baseline:check
+
+      - name: Test
+        run: npx vitest run
+
+  rag:
+    name: RAG service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # Matches the version in rag_service/Dockerfile.
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[test]"
+
+      - name: Test
+        run: pytest -q
+
+  docker:
+    name: Container builds
+    runs-on: ubuntu-latest
+    # Only worth the minutes once the code itself is known good.
+    needs: [web, rag]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Proves the images still build. No push — deployment is a separate,
+      # manual step so a merge never ships on its own.
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build RAG image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: rag_service/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

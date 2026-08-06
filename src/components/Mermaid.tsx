@@ -169,7 +169,6 @@ export const Mermaid = ({ chart, isStreaming = false }: MermaidProps) => {
         // NOTE: isInternalStreaming is intentionally excluded from deps — we read it
         // via isInternalStreamingRef so the effect doesn't re-trigger when it flips
         // to false after a successful render (which was the source of the flicker).
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [chart, id, isStreaming]);
 
     const handleRetry = async () => {

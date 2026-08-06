@@ -50,7 +50,6 @@ const BRAND = {
 export default function AppShell() {
     const webViewRef = useRef<WebView>(null);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [canGoBack, setCanGoBack] = useState(false);
     const [online, setOnline] = useState(true);
     const [failed, setFailed] = useState(false);
@@ -77,7 +76,6 @@ export default function AppShell() {
 
     const reload = useCallback(() => {
         setFailed(false);
-        setRefreshing(true);
         webViewRef.current?.reload();
     }, []);
 
@@ -135,11 +133,9 @@ export default function AppShell() {
                 onLoadStart={() => setLoading(true)}
                 onLoadEnd={() => {
                     setLoading(false);
-                    setRefreshing(false);
                 }}
                 onError={() => {
                     setLoading(false);
-                    setRefreshing(false);
                     setFailed(true);
                 }}
                 // Sign-in depends on cookies surviving across requests and restarts.
