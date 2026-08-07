@@ -42,6 +42,21 @@ function runEslintJson() {
   return JSON.parse(stdout);
 }
 
+/**
+ * Some rules embed the absolute file path in their message — react-hooks does
+ * this, for example. Hashing that verbatim makes the baseline machine-specific,
+ * so it never matches between a developer's checkout and a CI runner. Strip any
+ * absolute path down to its repo-relative form before hashing.
+ */
+function normalizeMessage(message) {
+  const text = String(message ?? "");
+  const root = process.cwd().replace(/\\/g, "/");
+  return text
+    .replace(/\\/g, "/")
+    .split(root + "/").join("")
+    .split(root).join("");
+}
+
 function toPosixRelative(filePath) {
   return path.relative(ROOT, filePath).split(path.sep).join("/");
 }
@@ -60,7 +75,7 @@ function normalizeReport(eslintJson) {
       const column = message.column ?? 0;
       const severity = message.severity ?? 0;
       const messageHash = createHash("sha256")
-        .update(String(message.message ?? ""))
+        .update(normalizeMessage(message.message))
         .digest("hex")
         .slice(0, 12);
 

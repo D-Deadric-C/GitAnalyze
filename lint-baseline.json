@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-06T23:51:30.985Z",
-  "signature": "4bc2255d1f08b7753088e96c7d9e4d8eb1713f557c1e6d17c37c35e9eeb1dbcf",
+  "generatedAt": "2026-08-07T23:02:44.886Z",
+  "signature": "9af107bdf7f727660519977b1feb34993659be74b2440de48e13d00a85696892",
   "totals": {
     "errors": 10,
     "warnings": 10,
@@ -159,7 +159,7 @@
       "line": 43,
       "column": 9,
       "severity": 2,
-      "messageHash": "a97b408c0c6c"
+      "messageHash": "e8e7db0b862a"
     },
     {
       "file": "src/components/InstallPWA.tsx",
@@ -167,7 +167,7 @@
       "line": 75,
       "column": 13,
       "severity": 2,
-      "messageHash": "75f33c8e6070"
+      "messageHash": "94e65e6520c7"
     }
   ],
   "ruleCounts": {
