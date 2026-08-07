@@ -41,6 +41,12 @@ GH_SEC=$(val AUTH_GITHUB_SECRET); GH_TOK=$(val GITHUB_TOKEN)
 GEMINI=$(val GEMINI_API_KEY)
 
 echo "==> Deploying RAG service"
+if az containerapp show -n gitpulse-rag -g "$RG" --output none 2>/dev/null; then
+  # Already exists: update the image only, so env vars set outside this
+  # script (AUTH_TRUST_HOST, KV_REST_API_*, ...) survive.
+  az containerapp update -n gitpulse-rag -g "$RG" \
+    --image "${ACR_SERVER}/gitpulse-rag:v1" --output none
+else
 az containerapp create -n gitpulse-rag -g "$RG" --environment "$ENVNAME" \
   --image "${ACR_SERVER}/gitpulse-rag:v1" \
   --registry-server "$ACR_SERVER" --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \
@@ -50,11 +56,18 @@ az containerapp create -n gitpulse-rag -g "$RG" --environment "$ENVNAME" \
   --env-vars "GEMINI_API_KEY=secretref:gemini" "GITHUB_TOKEN=secretref:ghtoken" \
              "RAG_MAX_CONTEXT_TOKENS=200000" \
   --output none
+fi
 
 RAG_URL="https://$(az containerapp show -n gitpulse-rag -g "$RG" --query properties.configuration.ingress.fqdn -o tsv)"
 echo "    ${RAG_URL}"
 
 echo "==> Deploying web service"
+if az containerapp show -n gitpulse-web -g "$RG" --output none 2>/dev/null; then
+  # Already exists: update the image only, so env vars set outside this
+  # script (AUTH_TRUST_HOST, KV_REST_API_*, ...) survive.
+  az containerapp update -n gitpulse-web -g "$RG" \
+    --image "${ACR_SERVER}/gitpulse-web:v1" --output none
+else
 az containerapp create -n gitpulse-web -g "$RG" --environment "$ENVNAME" \
   --image "${ACR_SERVER}/gitpulse-web:v1" \
   --registry-server "$ACR_SERVER" --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \
@@ -67,7 +80,9 @@ az containerapp create -n gitpulse-web -g "$RG" --environment "$ENVNAME" \
              "AUTH_GITHUB_SECRET=secretref:ghsecret" "GITHUB_TOKEN=secretref:ghtoken" \
              "GEMINI_API_KEY=secretref:gemini" \
              "RAG_PIPELINE_URL=${RAG_URL}" "RAG_MAX_CONTEXT_TOKENS=200000" \
+             "AUTH_TRUST_HOST=true" \
   --output none
+fi
 
 WEB_URL="https://$(az containerapp show -n gitpulse-web -g "$RG" --query properties.configuration.ingress.fqdn -o tsv)"
 
