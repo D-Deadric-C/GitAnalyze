@@ -17,6 +17,7 @@ import AdSlot from "@/components/AdSlot";
 import { ADSENSE_SLOTS, isAdSlotEnabled } from "@/lib/adsense";
 import AuthButton from "@/components/AuthButton";
 import { INVALID_SESSION_ERROR_PARAM } from "@/lib/session-guard";
+import { parseGitHubInput } from "@/lib/github-input";
 import { BlogPost } from "@prisma/client";
 
 export default function HomeClient({ initialPosts = [] }: { initialPosts?: BlogPost[] }) {
@@ -31,18 +32,31 @@ export default function HomeClient({ initialPosts = [] }: { initialPosts?: BlogP
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim()) return;
+
+        // Accepts full URLs, github.com/owner/repo, owner/repo, or a username.
+        const parsed = parseGitHubInput(input);
+
+        if (parsed.kind === "empty") {
+            setError("Enter a GitHub repository URL or username.");
+            return;
+        }
+        if (parsed.kind === "invalid") {
+            setError(parsed.reason);
+            return;
+        }
 
         setLoading(true);
         setError("");
 
         try {
-            const result = await fetchGitHubData(input);
+            // Route with the canonical slug, since /chat and the loaders split on "/"
+            // to tell a repository from a profile.
+            const result = await fetchGitHubData(parsed.slug);
 
             if (result.error) {
                 setError(result.error);
             } else {
-                router.push(`/chat?q=${encodeURIComponent(input)}`);
+                router.push(`/chat?q=${encodeURIComponent(parsed.slug)}`);
             }
         } catch {
             setError("Something went wrong. Please try again.");

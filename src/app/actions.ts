@@ -72,6 +72,7 @@ import { answerWithContext, answerWithContextStream } from "@/lib/gemini";
 import { mapProfileStreamChunk } from "@/lib/profile-stream";
 import { buildOutreachPack, findingFingerprint as buildFindingFingerprint } from "@/lib/services/report-service";
 import { getPublicSiteUrl } from "@/lib/site-url";
+import { parseGitHubInput } from "@/lib/github-input";
 import { getSessionUserId } from "@/lib/session-guard";
 import { canAccessPrivateReport } from "@/lib/services/report-access";
 import {
@@ -172,22 +173,33 @@ async function buildFullProfileContext(
 // ─── Public Actions — Data Fetching ──────────────────────────────────────────
 
 export async function fetchGitHubData(input: string) {
-    const parts = input.split("/");
+    // Callers may pass a raw URL, so normalise here too rather than relying on
+    // the client having done it.
+    const parsed = parseGitHubInput(input);
     const session = await auth();
 
-    if (parts.length === 1) {
+    if (parsed.kind === "empty") {
+        return { error: "Enter a GitHub repository URL or username." };
+    }
+    if (parsed.kind === "invalid") {
+        return { error: parsed.reason };
+    }
+
+    if (parsed.kind === "profile") {
+        const username = parsed.username;
         try {
-            const data = await getProfile(parts[0]);
+            const data = await getProfile(username);
             if (session?.user?.id) {
-                await recordSearch(session.user.id, parts[0], "profile");
+                await recordSearch(session.user.id, username, "profile");
             }
             return { type: "profile", data };
         } catch (e: unknown) {
             return { error: `User not found: ${getErrorMessage(e)}` };
         }
     }
-    if (parts.length === 2) {
-        const [owner, repo] = parts;
+
+    {
+        const { owner, repo, slug } = parsed;
         try {
             const repoData = await getRepo(owner, repo);
             const { tree, hiddenFiles } = await getRepoFileTree(
@@ -196,14 +208,14 @@ export async function fetchGitHubData(input: string) {
                 repoData.default_branch
             );
             if (session?.user?.id) {
-                await recordSearch(session.user.id, input, "repo");
+                // Record the canonical slug so history isn't polluted with URL variants.
+                await recordSearch(session.user.id, slug, "repo");
             }
             return { type: "repo", data: repoData, fileTree: tree, hiddenFiles };
         } catch (e: unknown) {
             return { error: `Repository not found: ${getErrorMessage(e)}` };
         }
     }
-    return { error: "Invalid input format" };
 }
 
 export async function fetchProfile(username: string) {
