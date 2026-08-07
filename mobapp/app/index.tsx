@@ -74,14 +74,57 @@ export default function AppShell() {
         return () => subscription.remove();
     }, [canGoBack]);
 
+    const hasLoadedOnce = useRef(false);
+    const loadingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const hideOverlay = useCallback(() => {
+        if (loadingTimer.current) {
+            clearTimeout(loadingTimer.current);
+            loadingTimer.current = null;
+        }
+        setLoading(false);
+    }, []);
+
+    /**
+     * The overlay is only for the very first document load.
+     *
+     * The web app is a single-page app, so in-app navigation happens via the
+     * History API. That fires onLoadStart without a matching onLoadEnd, which
+     * previously left the overlay up forever. After the first load the site
+     * renders its own loading states, so the native overlay is not needed.
+     */
+    const showOverlay = useCallback(() => {
+        if (hasLoadedOnce.current) return;
+        setLoading(true);
+        if (loadingTimer.current) clearTimeout(loadingTimer.current);
+        // Failsafe: never let the overlay outlive a genuinely slow first load.
+        loadingTimer.current = setTimeout(() => setLoading(false), 20000);
+    }, []);
+
+    const markLoaded = useCallback(() => {
+        hasLoadedOnce.current = true;
+        hideOverlay();
+    }, [hideOverlay]);
+
+    useEffect(() => {
+        return () => {
+            if (loadingTimer.current) clearTimeout(loadingTimer.current);
+        };
+    }, []);
+
     const reload = useCallback(() => {
         setFailed(false);
         webViewRef.current?.reload();
     }, []);
 
-    const onNavigationStateChange = useCallback((event: WebViewNavigation) => {
-        setCanGoBack(event.canGoBack);
-    }, []);
+    const onNavigationStateChange = useCallback(
+        (event: WebViewNavigation) => {
+            setCanGoBack(event.canGoBack);
+            // Authoritative signal: fires for SPA navigations too, unlike onLoadEnd.
+            if (!event.loading) markLoaded();
+        },
+        [markLoaded],
+    );
 
     /**
      * Keeps in-app navigation inside the WebView but sends anything off-host to
@@ -130,13 +173,16 @@ export default function AppShell() {
                 style={styles.webview}
                 onNavigationStateChange={onNavigationStateChange}
                 onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
-                onLoadStart={() => setLoading(true)}
-                onLoadEnd={() => {
-                    setLoading(false);
-                }}
+                onLoadStart={showOverlay}
+                onLoadEnd={markLoaded}
                 onError={() => {
-                    setLoading(false);
+                    hideOverlay();
                     setFailed(true);
+                }}
+                // Fires when the page itself finishes; covers SPA route changes
+                // that never produce an onLoadEnd.
+                onLoadProgress={({ nativeEvent }) => {
+                    if (nativeEvent.progress >= 1) markLoaded();
                 }}
                 // Sign-in depends on cookies surviving across requests and restarts.
                 sharedCookiesEnabled
